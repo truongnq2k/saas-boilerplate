@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  email     String?  @unique
+  password  String
+  name      String
+  role      Role     @default(USER)
+  status    UserStatus @default(ACTIVE)
+
+  tenant_id Int?
+  tenant    Tenant?  @relation(fields: [tenant_id], references: [id])
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([username])
+  @@index([email])
+  @@index([role])
+  @@index([status])
+  @@index([tenant_id])
+  @@map("users")
+}
+
+model Tenant {
+  id          Int      @id @default(autoincrement())
+  name        String
+  slug        String   @unique
+  status      TenantStatus @default(ACTIVE)
+  settings    Json?
+
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  users       User[]
+
+  @@index([slug])
+  @@index([status])
+  @@map("tenants")
+}
+
+enum Role {
+  USER
+  ADMIN
+  STAFF
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum TenantStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
