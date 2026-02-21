@@ -1,11 +1,11 @@
-import { PaginatedResponse, PaginationMeta, PaginationParams } from './common';
+import { PaginatedResponse, PaginationMeta, PaginationParams, UserRole, UserStatus } from './common';
 
 export interface ICreateUserDto {
   username: string;
   email?: string;
   password: string;
   name: string;
-  role?: "ADMIN" | "USER" | "STAFF";
+  role?: UserRole;
   tenant_id?: number;
 }
 
@@ -13,7 +13,7 @@ export interface IUpdateUserDto {
   username?: string;
   email?: string;
   name?: string;
-  status?: "ACTIVE" | "INACTIVE" | "SUSPENDED";
+  status?: UserStatus;
 }
 
 export interface IUserLoginData {
@@ -46,8 +46,8 @@ export interface UserProfile {
   username: string;
   email: string | null | undefined;
   name: string;
-  role: "ADMIN" | "USER" | "STAFF";
-  status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
+  role: UserRole;
+  status: UserStatus;
   tenant_id: number | null | undefined;
   created_at: Date;
   updated_at: Date;
@@ -58,8 +58,8 @@ export interface IUserWithoutPassword {
   username: string;
   email?: string;
   name: string;
-  role: "ADMIN" | "USER" | "STAFF";
-  status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
+  role: UserRole;
+  status: UserStatus;
   tenant_id?: number;
   created_at: Date;
   updated_at: Date;
@@ -83,7 +83,7 @@ export interface IUserStats {
 }
 
 export interface IUpdateStatusDto {
-  status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
+  status: UserStatus;
   reason?: string;
 }
 

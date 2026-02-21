@@ -8,19 +8,23 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  username  String   @unique
-  email     String?  @unique
-  password  String
-  name      String
-  role      Role     @default(USER)
-  status    UserStatus @default(ACTIVE)
+  id       Int        @id @default(autoincrement())
+  username String     @unique
+  email    String?    @unique
+  password String
+  name     String
+  role     Role       @default(USER)
+  status   UserStatus @default(ACTIVE)
 
   tenant_id Int?
-  tenant    Tenant?  @relation(fields: [tenant_id], references: [id])
+  tenant    Tenant? @relation(fields: [tenant_id], references: [id])
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
+
+  refresh_tokens RefreshToken[]
+  api_keys       ApiKey[]
+  auditLogs      AuditLog[]
 
   @@index([username])
   @@index([email])
@@ -30,21 +34,93 @@ model User {
   @@map("users")
 }
 
+model RefreshToken {
+  id        Int       @id @default(autoincrement())
+  token     String    @unique
+  expiresAt DateTime
+  revoked   Boolean   @default(false)
+  revokedAt DateTime?
+
+  user_id Int
+  user    User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  created_at DateTime @default(now())
+
+  @@index([user_id])
+  @@index([token])
+  @@map("refresh_tokens")
+}
+
+model ApiKey {
+  id           Int       @id @default(autoincrement())
+  name         String
+  key_hash     String    @unique
+  prefix       String
+  permissions  Json?
+  expiresAt    DateTime?
+  last_used_at DateTime?
+  is_active    Boolean   @default(true)
+  is_revoked   Boolean   @default(false)
+
+  user_id Int
+  user    User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  tenant_id Int?
+  tenant    Tenant? @relation(fields: [tenant_id], references: [id])
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([user_id])
+  @@index([tenant_id])
+  @@index([key_hash])
+  @@map("api_keys")
+}
+
 model Tenant {
-  id          Int      @id @default(autoincrement())
-  name        String
-  slug        String   @unique
-  status      TenantStatus @default(ACTIVE)
-  settings    Json?
+  id       Int          @id @default(autoincrement())
+  name     String
+  slug     String       @unique
+  status   TenantStatus @default(ACTIVE)
+  settings Json?
 
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
-  users       User[]
+  users      User[]
+  audit_logs AuditLog[]
+  apiKeys    ApiKey[]
 
   @@index([slug])
   @@index([status])
   @@map("tenants")
+}
+
+model AuditLog {
+  id          Int     @id @default(autoincrement())
+  action      String
+  entity      String
+  entity_id   Int?
+  description String? @db.Text
+  old_value   Json?
+  new_value   Json?
+  ip_address  String?
+  user_agent  String?
+
+  user_id Int?
+  user    User? @relation(fields: [user_id], references: [id])
+
+  tenant_id Int?
+  tenant    Tenant? @relation(fields: [tenant_id], references: [id])
+
+  created_at DateTime @default(now())
+
+  @@index([user_id])
+  @@index([tenant_id])
+  @@index([action])
+  @@index([entity])
+  @@index([created_at])
+  @@map("audit_logs")
 }
 
 enum Role {
@@ -63,4 +139,31 @@ enum TenantStatus {
   ACTIVE
   INACTIVE
   SUSPENDED
+}
+
+model Permission {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  slug        String  @unique
+  description String?
+  module      String
+  is_active   Boolean @default(true)
+
+  role_permissions RolePermission[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([module])
+  @@map("permissions")
+}
+
+model RolePermission {
+  id            Int        @id @default(autoincrement())
+  role          Role
+  permission_id Int
+  permission    Permission @relation(fields: [permission_id], references: [id], onDelete: Cascade)
+
+  @@unique([role, permission_id])
+  @@map("role_permissions")
 }

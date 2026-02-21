@@ -10,6 +10,10 @@ import fastifyRateLimit from "@fastify/rate-limit";
 import { join } from "path";
 
 import userRoutes from "./routes/user.routes";
+import tenantRoutes from "./routes/tenant.routes";
+import authRoutes from "./routes/auth.routes";
+import apiKeyRoutes from "./routes/api-key.routes";
+import { initializePermissions } from "./services/permission.service";
 
 const server = fastify({
   logger: {
@@ -139,10 +143,16 @@ const start = async () => {
   try {
     console.log('🚀 Starting SaaS Base Boilerplate...');
 
-    console.log('🔗 Registering routes...');
+    console.log('� Initializing permissions...');
+    await initializePermissions();
+
+    console.log('�🔗 Registering routes...');
 
     const routes = [
-      { route: userRoutes, name: 'User' }
+      { route: authRoutes, name: 'Auth' },
+      { route: userRoutes, name: 'User' },
+      { route: tenantRoutes, name: 'Tenant' },
+      { route: apiKeyRoutes, name: 'API Key' }
     ];
 
     for (const { route, name } of routes) {

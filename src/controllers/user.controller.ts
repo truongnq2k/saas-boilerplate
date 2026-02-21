@@ -20,7 +20,7 @@ import { errorResponse, paginatedResponse, successResponse, unauthorizedResponse
 export async function register(request: FastifyRequest, reply: FastifyReply) {
   try {
     const result = await createUser(request.body as ICreateUserDto);
-    return reply.status(201).send(successResponse(result, result.message));
+    return reply.status(201).send(successResponse(result, 'User registered successfully'));
   } catch (error) {
     if (error instanceof Error) {
       return reply.status(401).send(
@@ -36,7 +36,7 @@ export async function login(request: FastifyRequest, reply: FastifyReply) {
   try {
     const result = await loginUser(loginData);
     return reply.status(200).send(
-      successResponse(result, result.message)
+      successResponse(result, 'Login successful')
     );
   } catch (error) {
     if (error instanceof Error) {
@@ -170,6 +170,6 @@ export async function changePasswordHandler(request: FastifyRequest, reply: Fast
   const result = await changePassword(authRequest.user.userId, request.body as IPasswordChangeDto);
 
   return reply.status(200).send(
-    successResponse(result, result.message)
+    successResponse(result, 'Password changed successfully')
   );
 }

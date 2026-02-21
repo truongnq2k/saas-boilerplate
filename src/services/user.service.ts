@@ -1,20 +1,10 @@
-import bcrypt from 'bcryptjs';
-import { signToken } from '../middleware/auth';
-import type {
-  IAuthResponse,
-  ICreateUserDto,
-  IPasswordChangeDto,
-  IUpdateUserDto,
-  IUserLoginData,
-  UserPaginatedResponse,
-  UserQuery
-} from '../types/user';
-import {
-  buildPaginationMeta,
-  calculateSkip,
-  extractPaginationParams
-} from '../utils/pagination';
-import { prisma } from '../utils/prisma';
+import * as bcrypt from 'bcryptjs';
+import { Prisma } from '@prisma/client';
+import { prisma } from '@/utils/prisma';
+import { ICreateUserDto, IUpdateUserDto, IUpdateStatusDto, IUserLoginData, IPasswordChangeDto, UserQuery, UserPaginatedResponse, UserProfile } from '@/types/user';
+import { extractPaginationParams, buildPaginationMeta, calculateSkip } from '@/utils/pagination';
+import { signToken } from '@/middleware/auth';
+import { UserRole } from '@/types/common';
 
 const USER_SELECT_FIELDS = {
   id: true,
@@ -25,194 +15,42 @@ const USER_SELECT_FIELDS = {
   status: true,
   tenant_id: true,
   created_at: true,
-  updated_at: true
+  updated_at: true,
 } as const;
 
-const validatePassword = (password: string): void => {
-  if (password.length < 8) {
-    throw new Error('Password must be at least 8 characters');
-  }
-};
-
-const validateUsername = (username: string): void => {
-  if (username.length < 3) {
-    throw new Error('Username must be at least 3 characters');
-  }
-};
-
-export const createUser = async (userData: ICreateUserDto): Promise<IAuthResponse> => {
+export const createUser = async (data: ICreateUserDto): Promise<UserProfile> => {
   try {
-    validateUsername(userData.username);
-    validatePassword(userData.password);
-
     const existingUser = await prisma.user.findFirst({
       where: {
         OR: [
-          { username: userData.username },
-          ...(userData.email ? [{ email: userData.email }] : [])
-        ]
-      }
+          { username: data.username },
+          ...(data.email ? [{ email: data.email }] : []),
+        ],
+      },
     });
 
     if (existingUser) {
       throw new Error('Username or email already exists');
     }
 
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+
     const user = await prisma.user.create({
       data: {
-        username: userData.username,
-        email: userData.email,
-        password: await bcrypt.hash(userData.password, 12),
-        name: userData.name,
-        role: userData.role || 'USER',
-        tenant_id: userData.tenant_id
+        username: data.username,
+        email: data.email,
+        name: data.name,
+        password: hashedPassword,
+        role: data.role || 'USER',
+        tenant_id: data.tenant_id,
+        status: 'ACTIVE',
       },
-      select: USER_SELECT_FIELDS
+      select: USER_SELECT_FIELDS,
     });
 
-    const token = signToken({
-      userId: user.id,
-      role: user.role,
-      username: user.username
-    });
-
-    return {
-      user,
-      success: true,
-      token,
-      message: 'User created successfully'
-    };
+    return user as UserProfile;
   } catch (error) {
     console.error('Error creating user:', error);
-    throw error;
-  }
-};
-
-export const loginUser = async (loginData: IUserLoginData): Promise<IAuthResponse> => {
-  try {
-    const user = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { username: loginData.username },
-          ...(loginData.username.includes('@') ? [{ email: loginData.username }] : [])
-        ]
-      }
-    });
-
-    if (!user) {
-      throw new Error('Invalid credentials');
-    }
-
-    if (user.status === 'INACTIVE' || user.status === 'SUSPENDED') {
-      throw new Error('Account is inactive or suspended');
-    }
-
-    const isPasswordValid = await bcrypt.compare(loginData.password, user.password);
-    if (!isPasswordValid) {
-      throw new Error('Invalid credentials');
-    }
-
-    const userProfile = await prisma.user.findUnique({
-      where: { id: user.id },
-      select: USER_SELECT_FIELDS
-    });
-
-    if (!userProfile) {
-      throw new Error('Failed to retrieve user profile');
-    }
-
-    const token = signToken({
-      userId: user.id,
-      role: user.role,
-      username: user.username
-    });
-
-    return {
-      user: userProfile,
-      success: true,
-      token,
-      message: 'Login successful'
-    };
-  } catch (error) {
-    console.error('Error logging in user:', error);
-    throw error;
-  }
-};
-
-export const getUserProfile = async (id: number) => {
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id },
-      select: USER_SELECT_FIELDS
-    });
-
-    return user;
-  } catch (error) {
-    console.error('Error getting user profile:', error);
-    throw new Error('Failed to retrieve user profile');
-  }
-};
-
-export const updateUser = async (
-  id: number,
-  updateData: IUpdateUserDto
-) => {
-  try {
-    const user = await prisma.user.update({
-      where: { id },
-      data: updateData,
-      select: USER_SELECT_FIELDS
-    });
-
-    return user;
-  } catch (error) {
-    console.error('Error updating user:', error);
-    throw new Error('Failed to update user');
-  }
-};
-
-export const changePassword = async (
-  id: number,
-  passwordData: IPasswordChangeDto
-): Promise<{ success: boolean; message: string }> => {
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id },
-      select: { password: true }
-    });
-
-    if (!user) {
-      throw new Error('User not found');
-    }
-
-    const isCurrentPasswordValid = await bcrypt.compare(
-      passwordData.currentPassword,
-      user.password
-    );
-
-    if (!isCurrentPasswordValid) {
-      throw new Error('Current password is incorrect');
-    }
-
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      throw new Error('New password confirmation does not match');
-    }
-
-    validatePassword(passwordData.newPassword);
-
-    await prisma.user.update({
-      where: { id },
-      data: {
-        password: await bcrypt.hash(passwordData.newPassword, 12)
-      }
-    });
-
-    return {
-      success: true,
-      message: 'Password changed successfully'
-    };
-  } catch (error) {
-    console.error('Error changing password:', error);
     throw error;
   }
 };
@@ -222,22 +60,29 @@ export const getAllUsers = async (query: UserQuery = {}): Promise<UserPaginatedR
     const pagination = extractPaginationParams(query);
     const skip = calculateSkip(pagination.page, pagination.limit);
 
-    const where: Record<string, any> = {};
+    const where: Prisma.UserWhereInput = {};
 
     if (query.search) {
       where.OR = [
-        { username: { contains: query.search } },
         { name: { contains: query.search } },
-        { email: { contains: query.search } }
+        { username: { contains: query.search } },
+        { email: { contains: query.search } },
       ];
     }
 
-    if (query.role) where.role = query.role;
-    if (query.status) where.status = query.status;
+    if (query.role) {
+      where.role = query.role as any;
+    }
 
-    let orderBy = {};
+    if (query.status) {
+      where.status = query.status as any;
+    }
+
+    let orderBy: Prisma.UserOrderByWithRelationInput = {};
     if (query.sortBy) {
-      orderBy = { [query.sortBy]: query.sortOrder || 'desc' };
+      orderBy = { [query.sortBy]: query.sortOrder || 'desc' } as any;
+    } else {
+      orderBy = { created_at: 'desc' };
     }
 
     const [users, total] = await Promise.all([
@@ -246,21 +91,221 @@ export const getAllUsers = async (query: UserQuery = {}): Promise<UserPaginatedR
         orderBy,
         skip,
         take: pagination.limit,
-        select: USER_SELECT_FIELDS
+        select: USER_SELECT_FIELDS,
       }),
-      prisma.user.count({ where })
+      prisma.user.count({ where }),
     ]);
 
     return {
-      items: users,
+      items: users as UserProfile[],
       pagination: buildPaginationMeta({
         page: pagination.page,
         limit: pagination.limit,
-        total
-      })
+        total,
+      }),
     };
   } catch (error) {
     console.error('Error getting all users:', error);
-    throw new Error('Failed to retrieve users');
+    throw error;
+  }
+};
+
+export const getUserById = async (id: number): Promise<UserProfile | null> => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: USER_SELECT_FIELDS,
+    });
+
+    return user as UserProfile | null;
+  } catch (error) {
+    console.error('Error getting user by id:', error);
+    throw error;
+  }
+};
+
+export const getUserByUsername = async (username: string): Promise<UserProfile | null> => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { username },
+      select: {
+        ...USER_SELECT_FIELDS,
+        password: true,
+      },
+    });
+
+    return user as (UserProfile & { password: string }) | null;
+  } catch (error) {
+    console.error('Error getting user by username:', error);
+    throw error;
+  }
+};
+
+export const updateUser = async (id: number, data: IUpdateUserDto): Promise<UserProfile> => {
+  try {
+    const user = await prisma.user.update({
+      where: { id },
+      data: {
+        username: data.username,
+        email: data.email,
+        name: data.name,
+        status: data.status,
+      },
+      select: USER_SELECT_FIELDS,
+    });
+
+    return user as UserProfile;
+  } catch (error) {
+    console.error('Error updating user:', error);
+    throw error;
+  }
+};
+
+export const deleteUser = async (id: number): Promise<void> => {
+  try {
+    await prisma.user.delete({
+      where: { id },
+    });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    throw error;
+  }
+};
+
+export const updateUserStatus = async (id: number, data: IUpdateStatusDto): Promise<UserProfile> => {
+  try {
+    const user = await prisma.user.update({
+      where: { id },
+      data: {
+        status: data.status,
+      },
+      select: USER_SELECT_FIELDS,
+    });
+
+    return user as UserProfile;
+  } catch (error) {
+    console.error('Error updating user status:', error);
+    throw error;
+  }
+};
+
+export const getUserStats = async (): Promise<{
+  totalUsers: number;
+  activeUsers: number;
+  newUsersThisMonth: number;
+}> => {
+  try {
+    const now = new Date();
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const [totalUsers, activeUsers, newUsersThisMonth] = await Promise.all([
+      prisma.user.count(),
+      prisma.user.count({ where: { status: 'ACTIVE' } }),
+      prisma.user.count({
+        where: {
+          created_at: { gte: firstDayOfMonth },
+        },
+      }),
+    ]);
+
+    return {
+      totalUsers,
+      activeUsers,
+      newUsersThisMonth,
+    };
+  } catch (error) {
+    console.error('Error getting user stats:', error);
+    throw error;
+  }
+};
+
+export const loginUser = async (data: IUserLoginData): Promise<{ user: UserProfile; token: string }> => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { username: data.username },
+      select: {
+        ...USER_SELECT_FIELDS,
+        password: true,
+      },
+    });
+
+    if (!user) {
+      throw new Error('Invalid credentials');
+    }
+
+    const isPasswordValid = await bcrypt.compare(data.password, user.password);
+    if (!isPasswordValid) {
+      throw new Error('Invalid credentials');
+    }
+
+    if (user.status !== 'ACTIVE') {
+      throw new Error('User account is not active');
+    }
+
+    const token = signToken({
+      userId: user.id,
+      role: user.role as UserRole,
+      username: user.username,
+    });
+
+    return {
+      user: user as UserProfile,
+      token,
+    };
+  } catch (error) {
+    console.error('Error logging in user:', error);
+    throw error;
+  }
+};
+
+export const getUserProfile = async (userId: number): Promise<UserProfile> => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: USER_SELECT_FIELDS,
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    return user as UserProfile;
+  } catch (error) {
+    console.error('Error getting user profile:', error);
+    throw error;
+  }
+};
+
+export const changePassword = async (userId: number, data: IPasswordChangeDto): Promise<void> => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        password: true,
+      },
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const isCurrentPasswordValid = await bcrypt.compare(data.currentPassword, user.password);
+    if (!isCurrentPasswordValid) {
+      throw new Error('Current password is incorrect');
+    }
+
+    if (data.newPassword !== data.confirmPassword) {
+      throw new Error('New passwords do not match');
+    }
+
+    const hashedPassword = await bcrypt.hash(data.newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword },
+    });
+  } catch (error) {
+    console.error('Error changing password:', error);
+    throw error;
   }
 };

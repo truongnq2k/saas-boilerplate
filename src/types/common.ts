@@ -86,3 +86,7 @@ export enum ErrorCode {
   DATABASE_ERROR = 'DATABASE_ERROR',
   NETWORK_ERROR = 'NETWORK_ERROR',
 }
+
+export type UserRole = 'ADMIN' | 'USER' | 'STAFF';
+export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+export type TenantStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';

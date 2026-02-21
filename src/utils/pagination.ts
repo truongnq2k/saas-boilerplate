@@ -1,4 +1,4 @@
-import { PaginationMeta, PaginationOptions, PaginationParams } from '../types/common';
+import { PaginationMeta, PaginationOptions, PaginationParams } from '@/types/common';
 
 export const extractPaginationParams = (query: {
   page?: string | number;

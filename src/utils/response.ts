@@ -4,7 +4,7 @@ import {
   ErrorResponse,
   PaginatedApiResponse,
   PaginationMeta
-} from '../types/common';
+} from '@/types/common';
 
 /**
  * Create a successful response with data

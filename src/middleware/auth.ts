@@ -1,15 +1,14 @@
-import { ErrorCode } from "@/types/common";
+import { ErrorCode, UserRole } from "@/types/common";
 import { FastifyReply, FastifyRequest } from "fastify";
 import * as jwt from "jsonwebtoken";
 import { errorResponse } from "../utils/response";
 import { prisma } from "../utils/prisma";
 
-// Extend FastifyRequest type to include user
 declare module 'fastify' {
   interface FastifyRequest {
     user?: {
       userId: number;
-      role: "ADMIN" | "USER" | "STAFF";
+      role: UserRole;
       username: string;
     };
   }
@@ -20,7 +19,7 @@ const HEADER_KEY = process.env.X_HEADER_KEY || "tradingsystem-header-key";
 
 export interface AuthPayload {
   userId: number;
-  role: "ADMIN" | "USER" | "STAFF";
+  role: UserRole;
   username: string;
 }
 
@@ -42,7 +41,6 @@ export async function authMiddleware(
     const token = authHeader.replace("Bearer ", "");
     const decoded = jwt.verify(token, JWT_SECRET) as AuthPayload;
 
-    // Realtime check: verify user exists and is ACTIVE in database
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
       select: { id: true, status: true, role: true, username: true }
@@ -54,7 +52,6 @@ export async function authMiddleware(
         .send(errorResponse("User not found", "Tài khoản không tồn tại", { errorCode: ErrorCode.UNAUTHORIZED }));
     }
 
-    // Admin users are excluded from SUSPENDED and INACTIVE status checks
     if (user.role !== 'ADMIN') {
       if (user.status === 'SUSPENDED') {
         return reply
@@ -79,7 +76,7 @@ export async function authMiddleware(
   }
 }
 
-export function requireRole(role: "ADMIN" | "USER" | "STAFF") {
+export function requireRole(role: UserRole) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     if (!request.user || request.user.role !== role) {
       return reply
