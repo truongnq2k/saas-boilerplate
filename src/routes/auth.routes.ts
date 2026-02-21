@@ -3,9 +3,179 @@ import {
   logoutAllHandler,
   logoutHandler,
   refreshTokenHandler,
+  registerHandler,
+  loginHandler,
+  forgotPasswordHandler,
+  resetPasswordHandler,
 } from "../controllers/auth.controller";
 
 export default async function authRoutes(fastify: FastifyInstance) {
+  fastify.post(
+    "/register",
+    {
+      schema: {
+        description: "Register a new user",
+        tags: ["Auth"],
+        body: {
+          type: "object",
+          required: ["username", "password", "name"],
+          properties: {
+            username: {
+              type: "string",
+              description: "Unique username",
+            },
+            email: {
+              type: "string",
+              description: "User email (optional)",
+            },
+            password: {
+              type: "string",
+              description: "User password (min 6 characters)",
+            },
+            name: {
+              type: "string",
+              description: "User full name",
+            },
+          },
+        },
+        response: {
+          201: {
+            description: "User registered successfully",
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              message: { type: "string" },
+              data: {
+                type: "object",
+                properties: {
+                  user: { type: "object" },
+                  accessToken: { type: "string" },
+                  refreshToken: { type: "string" },
+                  expiresIn: { type: "number" },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    registerHandler
+  );
+
+  fastify.post(
+    "/login",
+    {
+      schema: {
+        description: "Login with email or username",
+        tags: ["Auth"],
+        body: {
+          type: "object",
+          required: ["login", "password"],
+          properties: {
+            login: {
+              type: "string",
+              description: "Email or username",
+            },
+            password: {
+              type: "string",
+              description: "User password",
+            },
+          },
+        },
+        response: {
+          200: {
+            description: "Login successful",
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              message: { type: "string" },
+              data: {
+                type: "object",
+                properties: {
+                  user: { type: "object" },
+                  accessToken: { type: "string" },
+                  refreshToken: { type: "string" },
+                  expiresIn: { type: "number" },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    loginHandler
+  );
+
+  fastify.post(
+    "/forgot-password",
+    {
+      schema: {
+        description: "Request password reset",
+        tags: ["Auth"],
+        body: {
+          type: "object",
+          required: ["email"],
+          properties: {
+            email: {
+              type: "string",
+              description: "User email",
+            },
+          },
+        },
+        response: {
+          200: {
+            description: "Password reset email sent",
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              message: { type: "string" },
+            },
+          },
+        },
+      },
+    },
+    forgotPasswordHandler
+  );
+
+  fastify.post(
+    "/reset-password",
+    {
+      schema: {
+        description: "Reset password with token",
+        tags: ["Auth"],
+        body: {
+          type: "object",
+          required: ["token", "newPassword", "confirmPassword"],
+          properties: {
+            token: {
+              type: "string",
+              description: "Password reset token",
+            },
+            newPassword: {
+              type: "string",
+              description: "New password (min 6 characters)",
+            },
+            confirmPassword: {
+              type: "string",
+              description: "Confirm new password",
+            },
+          },
+        },
+        response: {
+          200: {
+            description: "Password reset successful",
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              message: { type: "string" },
+            },
+          },
+        },
+      },
+    },
+    resetPasswordHandler
+  );
+
   fastify.post(
     "/refresh",
     {

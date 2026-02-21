@@ -221,13 +221,28 @@ export const getUserStats = async (): Promise<{
 
 export const loginUser = async (data: IUserLoginData): Promise<{ user: UserProfile; token: string }> => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { username: data.username },
-      select: {
-        ...USER_SELECT_FIELDS,
-        password: true,
-      },
-    });
+    const login = data.login.trim();
+    const isEmail = login.includes('@');
+
+    let user = null;
+
+    if (isEmail) {
+      user = await prisma.user.findUnique({
+        where: { email: login },
+        select: {
+          ...USER_SELECT_FIELDS,
+          password: true,
+        },
+      });
+    } else {
+      user = await prisma.user.findUnique({
+        where: { username: login },
+        select: {
+          ...USER_SELECT_FIELDS,
+          password: true,
+        },
+      });
+    }
 
     if (!user) {
       throw new Error('Invalid credentials');

@@ -17,7 +17,7 @@ export interface IUpdateUserDto {
 }
 
 export interface IUserLoginData {
-  username: string;
+  login: string;
   password: string;
 }
 
