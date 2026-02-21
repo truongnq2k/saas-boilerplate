@@ -14,6 +14,7 @@ const USER_SELECT_FIELDS = {
   role: true,
   status: true,
   tenant_id: true,
+  balance: true,
   created_at: true,
   updated_at: true,
 } as const;
@@ -48,7 +49,20 @@ export const createUser = async (data: ICreateUserDto): Promise<UserProfile> => 
       select: USER_SELECT_FIELDS,
     });
 
-    return user as UserProfile;
+    const userProfile: UserProfile = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      name: user.name,
+      role: user.role as UserRole,
+      status: user.status,
+      tenant_id: user.tenant_id,
+      balance: user.balance.toString(),
+      created_at: user.created_at,
+      updated_at: user.updated_at,
+    };
+
+    return userProfile;
   } catch (error) {
     console.error('Error creating user:', error);
     throw error;
@@ -96,8 +110,21 @@ export const getAllUsers = async (query: UserQuery = {}): Promise<UserPaginatedR
       prisma.user.count({ where }),
     ]);
 
+    const items: UserProfile[] = users.map((user) => ({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      name: user.name,
+      role: user.role as UserRole,
+      status: user.status,
+      tenant_id: user.tenant_id,
+      balance: user.balance.toString(),
+      created_at: user.created_at,
+      updated_at: user.updated_at,
+    }));
+
     return {
-      items: users as UserProfile[],
+      items,
       pagination: buildPaginationMeta({
         page: pagination.page,
         limit: pagination.limit,
@@ -117,7 +144,24 @@ export const getUserById = async (id: number): Promise<UserProfile | null> => {
       select: USER_SELECT_FIELDS,
     });
 
-    return user as UserProfile | null;
+    if (!user) {
+      return null;
+    }
+
+    const userProfile: UserProfile = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      name: user.name,
+      role: user.role as UserRole,
+      status: user.status,
+      tenant_id: user.tenant_id,
+      balance: user.balance.toString(),
+      created_at: user.created_at,
+      updated_at: user.updated_at,
+    };
+
+    return userProfile;
   } catch (error) {
     console.error('Error getting user by id:', error);
     throw error;
@@ -154,7 +198,20 @@ export const updateUser = async (id: number, data: IUpdateUserDto): Promise<User
       select: USER_SELECT_FIELDS,
     });
 
-    return user as UserProfile;
+    const userProfile: UserProfile = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      name: user.name,
+      role: user.role as UserRole,
+      status: user.status,
+      tenant_id: user.tenant_id,
+      balance: user.balance.toString(),
+      created_at: user.created_at,
+      updated_at: user.updated_at,
+    };
+
+    return userProfile;
   } catch (error) {
     console.error('Error updating user:', error);
     throw error;
@@ -182,7 +239,20 @@ export const updateUserStatus = async (id: number, data: IUpdateStatusDto): Prom
       select: USER_SELECT_FIELDS,
     });
 
-    return user as UserProfile;
+    const userProfile: UserProfile = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      name: user.name,
+      role: user.role as UserRole,
+      status: user.status,
+      tenant_id: user.tenant_id,
+      balance: user.balance.toString(),
+      created_at: user.created_at,
+      updated_at: user.updated_at,
+    };
+
+    return userProfile;
   } catch (error) {
     console.error('Error updating user status:', error);
     throw error;
@@ -263,8 +333,21 @@ export const loginUser = async (data: IUserLoginData): Promise<{ user: UserProfi
       username: user.username,
     });
 
+    const userProfile: UserProfile = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      name: user.name,
+      role: user.role as UserRole,
+      status: user.status,
+      tenant_id: user.tenant_id,
+      balance: user.balance.toString(),
+      created_at: user.created_at,
+      updated_at: user.updated_at,
+    };
+
     return {
-      user: user as UserProfile,
+      user: userProfile,
       token,
     };
   } catch (error) {
@@ -284,7 +367,20 @@ export const getUserProfile = async (userId: number): Promise<UserProfile> => {
       throw new Error('User not found');
     }
 
-    return user as UserProfile;
+    const userProfile: UserProfile = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      name: user.name,
+      role: user.role as UserRole,
+      status: user.status,
+      tenant_id: user.tenant_id,
+      balance: user.balance.toString(),
+      created_at: user.created_at,
+      updated_at: user.updated_at,
+    };
+
+    return userProfile;
   } catch (error) {
     console.error('Error getting user profile:', error);
     throw error;

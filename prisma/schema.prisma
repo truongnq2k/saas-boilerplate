@@ -15,6 +15,7 @@ model User {
   name     String
   role     Role       @default(USER)
   status   UserStatus @default(ACTIVE)
+  balance  Decimal    @default(0) @db.Decimal(15, 2)
 
   tenant_id Int?
   tenant    Tenant? @relation(fields: [tenant_id], references: [id])
@@ -22,10 +23,11 @@ model User {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
-  refresh_tokens RefreshToken[]
+  refresh_tokens        RefreshToken[]
   password_reset_tokens PasswordResetToken[]
-  api_keys       ApiKey[]
-  auditLogs      AuditLog[]
+  api_keys              ApiKey[]
+  auditLogs             AuditLog[]
+  transactions          Transaction[]
 
   @@index([username])
   @@index([email])
@@ -157,6 +159,39 @@ enum TenantStatus {
   ACTIVE
   INACTIVE
   SUSPENDED
+}
+
+enum TransactionType {
+  CREDIT
+  DEBIT
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model Transaction {
+  id          Int               @id @default(autoincrement())
+  amount      Decimal           @db.Decimal(15, 2)
+  type        TransactionType
+  status      TransactionStatus @default(PENDING)
+  description String?
+  reference   String?           @unique
+
+  user_id Int
+  user    User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([user_id])
+  @@index([type])
+  @@index([status])
+  @@index([reference])
+  @@map("transactions")
 }
 
 model Permission {

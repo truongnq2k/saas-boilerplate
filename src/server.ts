@@ -13,6 +13,7 @@ import userRoutes from "./routes/user.routes";
 import tenantRoutes from "./routes/tenant.routes";
 import authRoutes from "./routes/auth.routes";
 import apiKeyRoutes from "./routes/api-key.routes";
+import balanceRoutes from "./routes/balance.routes";
 import { initializePermissions } from "./services/permission.service";
 
 const server = fastify({
@@ -152,7 +153,8 @@ const start = async () => {
       { route: authRoutes, name: 'Auth' },
       { route: userRoutes, name: 'User' },
       { route: tenantRoutes, name: 'Tenant' },
-      { route: apiKeyRoutes, name: 'API Key' }
+      { route: apiKeyRoutes, name: 'API Key' },
+      { route: balanceRoutes, name: 'Balance' }
     ];
 
     for (const { route, name } of routes) {

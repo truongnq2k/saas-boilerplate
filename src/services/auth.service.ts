@@ -87,6 +87,7 @@ export const register = async (data: IRegisterDto): Promise<IAuthResponse> => {
       role: user.role as UserRole,
       status: user.status as UserStatus,
       tenant_id: user.tenant_id,
+      balance: user.balance.toString(),
       created_at: user.created_at,
       updated_at: user.updated_at,
     };
@@ -151,6 +152,7 @@ export const loginWithEmailOrUsername = async (data: ILoginDto): Promise<IAuthRe
       role: user.role as UserRole,
       status: user.status as UserStatus,
       tenant_id: user.tenant_id,
+      balance: user.balance.toString(),
       created_at: user.created_at,
       updated_at: user.updated_at,
     };

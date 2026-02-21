@@ -49,6 +49,7 @@ export interface UserProfile {
   role: UserRole;
   status: UserStatus;
   tenant_id: number | null | undefined;
+  balance: string;
   created_at: Date;
   updated_at: Date;
 }
