@@ -13,6 +13,7 @@ export interface IUpdateUserDto {
   username?: string;
   email?: string;
   name?: string;
+  role?: UserRole;
   status?: UserStatus;
 }
 

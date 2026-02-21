@@ -187,12 +187,34 @@ export const getUserByUsername = async (username: string): Promise<UserProfile |
 
 export const updateUser = async (id: number, data: IUpdateUserDto): Promise<UserProfile> => {
   try {
+    if (data.username || data.email) {
+      const existingUser = await prisma.user.findFirst({
+        where: {
+          id: { not: id },
+          OR: [
+            ...(data.username ? [{ username: data.username }] : []),
+            ...(data.email ? [{ email: data.email }] : []),
+          ],
+        },
+      });
+
+      if (existingUser) {
+        if (existingUser.username === data.username) {
+          throw new Error('Username already exists');
+        }
+        if (existingUser.email === data.email) {
+          throw new Error('Email already exists');
+        }
+      }
+    }
+
     const user = await prisma.user.update({
       where: { id },
       data: {
         username: data.username,
         email: data.email,
         name: data.name,
+        role: data.role,
         status: data.status,
       },
       select: USER_SELECT_FIELDS,

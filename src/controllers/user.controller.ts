@@ -2,10 +2,13 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import {
   changePassword,
   createUser,
+  deleteUser,
   getAllUsers,
   getUserProfile,
+  getUserStats,
   loginUser,
-  updateUser
+  updateUser,
+  updateUserStatus
 } from "@/services/user.service";
 import { AuthenticatedRequest } from "@/types/request";
 import {
@@ -58,19 +61,27 @@ export async function getAllUsersHandler(request: FastifyRequest, reply: Fastify
   const query = request.query as any;
   const { page, limit } = extractPaginationParams(query);
 
-  const result = await getAllUsers({
-    page,
-    limit,
-    search: query.search,
-    sortBy: query.sortBy,
-    sortOrder: query.sortOrder,
-    role: query.role,
-    status: query.status
-  });
+  try {
+    const result = await getAllUsers({
+      page,
+      limit,
+      search: query.search,
+      sortBy: query.sortBy,
+      sortOrder: query.sortOrder,
+      role: query.role,
+      status: query.status
+    });
 
-  return reply.status(200).send(
-    paginatedResponse(result.items, result.pagination, 'Users retrieved successfully')
-  );
+    return reply.status(200).send(
+      paginatedResponse(result.items, result.pagination, 'Users retrieved successfully')
+    );
+  } catch (error) {
+    if (error instanceof Error) {
+      return reply.status(400).send(
+        errorResponse('Failed to get users', error.message)
+      );
+    }
+  }
 }
 
 export async function getUserByIdHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -90,15 +101,23 @@ export async function getUserByIdHandler(request: FastifyRequest, reply: Fastify
     );
   }
 
-  const user = await getUserProfile(userId);
+  try {
+    const user = await getUserProfile(userId);
 
-  if (!user) {
-    return reply.status(404).send(
-      errorResponse("User not found", `User with ID ${userId} does not exist`)
-    );
+    if (!user) {
+      return reply.status(404).send(
+        errorResponse("User not found", `User with ID ${userId} does not exist`)
+      );
+    }
+
+    return reply.status(200).send(successResponse(user, 'User retrieved successfully'));
+  } catch (error) {
+    if (error instanceof Error) {
+      return reply.status(400).send(
+        errorResponse('Failed to get user', error.message)
+      );
+    }
   }
-
-  return reply.status(200).send(successResponse(user, 'User retrieved successfully'));
 }
 
 export async function updateUserHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -118,9 +137,17 @@ export async function updateUserHandler(request: FastifyRequest, reply: FastifyR
     );
   }
 
-  const updatedUser = await updateUser(userId, request.body as IUpdateUserDto);
+  try {
+    const updatedUser = await updateUser(userId, request.body as IUpdateUserDto);
 
-  return reply.status(200).send(successResponse(updatedUser, 'User updated successfully'));
+    return reply.status(200).send(successResponse(updatedUser, 'User updated successfully'));
+  } catch (error) {
+    if (error instanceof Error) {
+      return reply.status(400).send(
+        errorResponse('Failed to update user', error.message)
+      );
+    }
+  }
 }
 
 export async function getProfileHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -131,17 +158,25 @@ export async function getProfileHandler(request: FastifyRequest, reply: FastifyR
     );
   }
 
-  const userProfile = await getUserProfile(authRequest.user.userId);
+  try {
+    const userProfile = await getUserProfile(authRequest.user.userId);
 
-  if (!userProfile) {
-    return reply.status(404).send(
-      errorResponse('User profile not found', 'User does not exist')
+    if (!userProfile) {
+      return reply.status(404).send(
+        errorResponse('User profile not found', 'User does not exist')
+      );
+    }
+
+    return reply.status(200).send(
+      successResponse(userProfile, 'Profile retrieved successfully')
     );
+  } catch (error) {
+    if (error instanceof Error) {
+      return reply.status(400).send(
+        errorResponse('Failed to get profile', error.message)
+      );
+    }
   }
-
-  return reply.status(200).send(
-    successResponse(userProfile, 'Profile retrieved successfully')
-  );
 }
 
 export async function updateProfileHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -152,11 +187,19 @@ export async function updateProfileHandler(request: FastifyRequest, reply: Fasti
     );
   }
 
-  const updatedUser = await updateUser(authRequest.user.userId, request.body as IUpdateUserDto);
+  try {
+    const updatedUser = await updateUser(authRequest.user.userId, request.body as IUpdateUserDto);
 
-  return reply.status(200).send(
-    successResponse(updatedUser, 'Profile updated successfully')
-  );
+    return reply.status(200).send(
+      successResponse(updatedUser, 'Profile updated successfully')
+    );
+  } catch (error) {
+    if (error instanceof Error) {
+      return reply.status(400).send(
+        errorResponse('Failed to update profile', error.message)
+      );
+    }
+  }
 }
 
 export async function changePasswordHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -167,9 +210,106 @@ export async function changePasswordHandler(request: FastifyRequest, reply: Fast
     );
   }
 
-  const result = await changePassword(authRequest.user.userId, request.body as IPasswordChangeDto);
+  try {
+    const result = await changePassword(authRequest.user.userId, request.body as IPasswordChangeDto);
 
-  return reply.status(200).send(
-    successResponse(result, 'Password changed successfully')
-  );
+    return reply.status(200).send(
+      successResponse(result, 'Password changed successfully')
+    );
+  } catch (error) {
+    if (error instanceof Error) {
+      return reply.status(400).send(
+        errorResponse('Failed to change password', error.message)
+      );
+    }
+  }
+}
+
+export async function deleteUserHandler(request: FastifyRequest, reply: FastifyReply) {
+  const authRequest = request as AuthenticatedRequest;
+  if (!authRequest.user) {
+    return reply.status(401).send(
+      unauthorizedResponse('Authentication required')
+    );
+  }
+
+  const { id } = request.params as { id: string };
+  const userId = parseInt(id);
+
+  if (isNaN(userId)) {
+    return reply.status(400).send(
+      errorResponse("Invalid user ID", "ID must be a number")
+    );
+  }
+
+  try {
+    await deleteUser(userId);
+
+    return reply.status(200).send(
+      successResponse(null, 'User deleted successfully')
+    );
+  } catch (error) {
+    if (error instanceof Error) {
+      return reply.status(400).send(
+        errorResponse('Failed to delete user', error.message)
+      );
+    }
+  }
+}
+
+export async function getUserStatsHandler(request: FastifyRequest, reply: FastifyReply) {
+  const authRequest = request as AuthenticatedRequest;
+  if (!authRequest.user) {
+    return reply.status(401).send(
+      unauthorizedResponse('Authentication required')
+    );
+  }
+
+  try {
+    const stats = await getUserStats();
+
+    return reply.status(200).send(
+      successResponse(stats, 'User stats retrieved successfully')
+    );
+  } catch (error) {
+    if (error instanceof Error) {
+      return reply.status(400).send(
+        errorResponse('Failed to get user stats', error.message)
+      );
+    }
+  }
+}
+
+export async function updateUserStatusHandler(request: FastifyRequest, reply: FastifyReply) {
+  const authRequest = request as AuthenticatedRequest;
+  if (!authRequest.user) {
+    return reply.status(401).send(
+      unauthorizedResponse('Authentication required')
+    );
+  }
+
+  const { id } = request.params as { id: string };
+  const userId = parseInt(id);
+
+  if (isNaN(userId)) {
+    return reply.status(400).send(
+      errorResponse("Invalid user ID", "ID must be a number")
+    );
+  }
+
+  const body = request.body as { status: string; reason?: string };
+
+  try {
+    const updatedUser = await updateUserStatus(userId, { status: body.status as any, reason: body.reason });
+
+    return reply.status(200).send(
+      successResponse(updatedUser, 'User status updated successfully')
+    );
+  } catch (error) {
+    if (error instanceof Error) {
+      return reply.status(400).send(
+        errorResponse('Failed to update user status', error.message)
+      );
+    }
+  }
 }

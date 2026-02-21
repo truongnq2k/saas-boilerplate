@@ -1,13 +1,16 @@
 import { FastifyInstance } from "fastify";
 import {
   changePasswordHandler,
+  deleteUserHandler,
   getAllUsersHandler,
   getProfileHandler,
+  getUserStatsHandler,
   getUserByIdHandler,
   login,
   register,
   updateProfileHandler,
-  updateUserHandler
+  updateUserHandler,
+  updateUserStatusHandler
 } from "../controllers/user.controller";
 import { authMiddleware, requireRole } from "../middleware/auth";
 
@@ -226,6 +229,11 @@ const adminUpdateUserSchema = {
         format: 'email',
         description: 'Email address'
       },
+      role: {
+        type: 'string',
+        enum: ['USER', 'ADMIN', 'STAFF'],
+        description: 'User role'
+      },
       status: {
         type: 'string',
         enum: ['ACTIVE', 'INACTIVE', 'SUSPENDED'],
@@ -287,6 +295,61 @@ const changePasswordSchema = {
   }
 };
 
+const deleteUserSchema = {
+  description: 'Delete user (Admin)',
+  tags: ['Users'],
+  security: [{ bearerAuth: [] }],
+  params: {
+    type: 'object',
+    required: ['id'],
+    properties: {
+      id: {
+        type: 'string',
+        description: 'User ID',
+        pattern: '^[0-9]+$'
+      },
+    },
+  }
+};
+
+const userStatsSchema = {
+  description: 'Get user statistics (Admin)',
+  tags: ['Users'],
+  security: [{ bearerAuth: [] }]
+};
+
+const updateUserStatusSchema = {
+  description: 'Update user status (Admin)',
+  tags: ['Users'],
+  security: [{ bearerAuth: [] }],
+  params: {
+    type: 'object',
+    required: ['id'],
+    properties: {
+      id: {
+        type: 'string',
+        description: 'User ID',
+        pattern: '^[0-9]+$'
+      },
+    },
+  },
+  body: {
+    type: 'object',
+    required: ['status'],
+    properties: {
+      status: {
+        type: 'string',
+        enum: ['ACTIVE', 'INACTIVE', 'SUSPENDED'],
+        description: 'Account status'
+      },
+      reason: {
+        type: 'string',
+        description: 'Reason for status change'
+      },
+    },
+  }
+};
+
 export default async function userRoutes(fastify: FastifyInstance) {
   fastify.post("/users/register", { schema: registerSchema }, register);
 
@@ -321,4 +384,19 @@ export default async function userRoutes(fastify: FastifyInstance) {
     schema: adminUpdateUserSchema,
     preHandler: [authMiddleware, requireRole('ADMIN')]
   }, updateUserHandler);
+
+  fastify.delete('/admin/users/:id', {
+    schema: deleteUserSchema,
+    preHandler: [authMiddleware, requireRole('ADMIN')]
+  }, deleteUserHandler);
+
+  fastify.get('/admin/users/stats', {
+    schema: userStatsSchema,
+    preHandler: [authMiddleware, requireRole('ADMIN')]
+  }, getUserStatsHandler);
+
+  fastify.put('/admin/users/:id/status', {
+    schema: updateUserStatusSchema,
+    preHandler: [authMiddleware, requireRole('ADMIN')]
+  }, updateUserStatusHandler);
 }
