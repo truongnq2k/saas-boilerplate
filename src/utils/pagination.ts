@@ -1,5 +1,19 @@
 import { PaginationMeta, PaginationOptions, PaginationParams } from '@/types/common';
 
+const ALLOWED_SORT_FIELDS = new Set([
+  'created_at',
+  'updated_at',
+  'id',
+  'name',
+  'username',
+  'email',
+  'status',
+  'role',
+  'balance',
+  'amount',
+  'type',
+]);
+
 export const extractPaginationParams = (query: {
   page?: string | number;
   limit?: string | number;
@@ -8,7 +22,8 @@ export const extractPaginationParams = (query: {
 }): PaginationOptions => {
   const page = Math.max(1, parseInt(String(query.page)) || 1);
   const limit = Math.min(100, Math.max(1, parseInt(String(query.limit)) || 10));
-  const sortBy = query.sortBy || 'created_at';
+  const sortByField = query.sortBy;
+  const sortBy = sortByField && ALLOWED_SORT_FIELDS.has(sortByField) ? sortByField : 'created_at';
   const sortOrder = (query.sortOrder && query.sortOrder.toLowerCase() === 'asc') ? 'asc' : 'desc';
 
   return {
@@ -58,14 +73,12 @@ export const validatePaginationParams = (params: PaginationParams): {
 } => {
   const errors: string[] = [];
 
-  // Validate page
   if (params.page !== undefined) {
     if (!Number.isInteger(params.page) || params.page < 1) {
       errors.push('Page must be a positive integer');
     }
   }
 
-  // Validate limit
   if (params.limit !== undefined) {
     if (!Number.isInteger(params.limit) || params.limit < 1) {
       errors.push('Limit must be a positive integer');
@@ -74,7 +87,10 @@ export const validatePaginationParams = (params: PaginationParams): {
     }
   }
 
-  // Validate sortOrder
+  if (params.sortBy !== undefined && !ALLOWED_SORT_FIELDS.has(params.sortBy)) {
+    errors.push(`Sort field must be one of: ${Array.from(ALLOWED_SORT_FIELDS).join(', ')}`);
+  }
+
   if (params.sortOrder !== undefined) {
     if (params.sortOrder !== 'asc' && params.sortOrder !== 'desc') {
       errors.push('Sort order must be either "asc" or "desc"');
@@ -85,7 +101,6 @@ export const validatePaginationParams = (params: PaginationParams): {
     return { isValid: false, errors };
   }
 
-  // Return normalized pagination options
   return {
     isValid: true,
     errors: [],
@@ -106,11 +121,12 @@ export const createDefaultPaginationOptions = (): PaginationOptions => {
 };
 
 /**
- * Build order by clause for Prisma queries
+ * Build order by clause for Prisma queries with whitelist validation
  */
 export const buildOrderBy = (sortBy?: string, sortOrder?: 'asc' | 'desc'): Record<string, 'asc' | 'desc'> => {
+  const field = ALLOWED_SORT_FIELDS.has(sortBy || '') ? sortBy : 'created_at';
   return {
-    [sortBy || 'created_at']: sortOrder || 'desc',
+    [field!]: sortOrder || 'desc',
   };
 };
 

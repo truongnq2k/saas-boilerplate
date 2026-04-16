@@ -9,6 +9,12 @@ import {
   resetPasswordHandler,
 } from "../controllers/auth.controller";
 
+const AUTH_RATE_LIMIT = {
+  max: 10,
+  timeWindow: '1 minute',
+  message: { success: false, message: 'Too many requests. Please try again later.' },
+};
+
 export default async function authRoutes(fastify: FastifyInstance) {
   fastify.post(
     "/register",
@@ -30,7 +36,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
             },
             password: {
               type: "string",
-              description: "User password (min 6 characters)",
+              description: "User password (min 8 characters)",
             },
             name: {
               type: "string",
@@ -57,6 +63,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
             },
           },
         },
+      },
+      config: {
+        rateLimit: AUTH_RATE_LIMIT,
       },
     },
     registerHandler
@@ -102,6 +111,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
           },
         },
       },
+      config: {
+        rateLimit: AUTH_RATE_LIMIT,
+      },
     },
     loginHandler
   );
@@ -133,6 +145,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
           },
         },
       },
+      config: {
+        rateLimit: AUTH_RATE_LIMIT,
+      },
     },
     forgotPasswordHandler
   );
@@ -153,7 +168,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
             },
             newPassword: {
               type: "string",
-              description: "New password (min 6 characters)",
+              description: "New password (min 8 characters)",
             },
             confirmPassword: {
               type: "string",
@@ -171,6 +186,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
             },
           },
         },
+      },
+      config: {
+        rateLimit: AUTH_RATE_LIMIT,
       },
     },
     resetPasswordHandler

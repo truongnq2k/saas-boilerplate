@@ -17,22 +17,21 @@ export function requireTenant() {
     }
 
     if (request.user.role === 'ADMIN') {
-      return;
-    }
-
-    const tenantId = request.headers["x-tenant-id"];
-    if (tenantId) {
-      const parsedTenantId = parseInt(tenantId as string);
-      if (!isNaN(parsedTenantId)) {
-        request.tenantId = parsedTenantId;
-        return;
+      const tenantIdHeader = request.headers["x-tenant-id"];
+      if (tenantIdHeader) {
+        const parsedTenantId = parseInt(tenantIdHeader as string);
+        if (!isNaN(parsedTenantId)) {
+          request.tenantId = parsedTenantId;
+          return;
+        }
       }
+      return;
     }
 
     if (!request.user.tenantId) {
       return reply
         .status(403)
-        .send(errorResponse("Forbidden", "Tenant context required. Set X-Tenant-Id header or user must belong to a tenant.", { errorCode: ErrorCode.FORBIDDEN }));
+        .send(errorResponse("Forbidden", "Tenant context required. User must belong to a tenant.", { errorCode: ErrorCode.FORBIDDEN }));
     }
 
     request.tenantId = request.user.tenantId;

@@ -29,19 +29,19 @@ export const addBalance = async (data: IAddBalanceDto): Promise<ITransactionResp
       throw new Error('Amount must be greater than 0');
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: data.userId },
-      select: { id: true, balance: true },
-    });
-
-    if (!user) {
-      throw new Error('User not found');
-    }
-
     const transaction = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { id: data.userId },
+        select: { id: true, balance: true },
+      });
+
+      if (!user) {
+        throw new Error('User not found');
+      }
+
       const newBalance = user.balance.plus(data.amount);
 
-      const updatedUser = await tx.user.update({
+      await tx.user.update({
         where: { id: data.userId },
         data: { balance: newBalance },
       });
@@ -83,23 +83,23 @@ export const subtractBalance = async (data: ISubtractBalanceDto): Promise<ITrans
       throw new Error('Amount must be greater than 0');
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: data.userId },
-      select: { id: true, balance: true },
-    });
-
-    if (!user) {
-      throw new Error('User not found');
-    }
-
-    if (user.balance.lessThan(data.amount)) {
-      throw new Error('Insufficient balance');
-    }
-
     const transaction = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { id: data.userId },
+        select: { id: true, balance: true },
+      });
+
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      if (user.balance.lessThan(data.amount)) {
+        throw new Error('Insufficient balance');
+      }
+
       const newBalance = user.balance.minus(data.amount);
 
-      const updatedUser = await tx.user.update({
+      await tx.user.update({
         where: { id: data.userId },
         data: { balance: newBalance },
       });

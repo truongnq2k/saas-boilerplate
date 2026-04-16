@@ -2,6 +2,7 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import { refreshAccessToken, revokeRefreshToken, revokeAllUserTokens, register, loginWithEmailOrUsername, forgotPassword, resetPassword } from "@/services/auth.service";
 import { IRefreshTokenDto, IRegisterDto, ILoginDto, IForgotPasswordDto, IResetPasswordDto } from "@/types/auth";
 import { errorResponse, successResponse, unauthorizedResponse } from "@/utils/response";
+import { validatePassword, PASSWORD_CONFIG } from "@/utils/config";
 
 export async function registerHandler(
   request: FastifyRequest,
@@ -16,9 +17,10 @@ export async function registerHandler(
       );
     }
 
-    if (data.password.length < 6) {
+    const passwordValidation = validatePassword(data.password);
+    if (!passwordValidation.valid) {
       return reply.status(400).send(
-        errorResponse("Bad Request", "Password must be at least 6 characters")
+        errorResponse("Bad Request", passwordValidation.errors.join('. '))
       );
     }
 
@@ -117,9 +119,10 @@ export async function resetPasswordHandler(
       );
     }
 
-    if (data.newPassword.length < 6) {
+    const passwordValidation = validatePassword(data.newPassword);
+    if (!passwordValidation.valid) {
       return reply.status(400).send(
-        errorResponse("Bad Request", "Password must be at least 6 characters")
+        errorResponse("Bad Request", passwordValidation.errors.join('. '))
       );
     }
 
