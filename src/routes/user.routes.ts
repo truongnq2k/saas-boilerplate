@@ -6,133 +6,11 @@ import {
   getProfileHandler,
   getUserStatsHandler,
   getUserByIdHandler,
-  login,
-  register,
   updateProfileHandler,
   updateUserHandler,
   updateUserStatusHandler
 } from "../controllers/user.controller";
 import { authMiddleware, requireRole } from "../middleware/auth";
-
-const registerSchema = {
-  description: 'Register a new user',
-  tags: ['Users'],
-  body: {
-    type: 'object',
-    required: ['username', 'password', 'name'],
-    properties: {
-      username: {
-        type: 'string',
-        minLength: 3,
-        description: 'Username'
-      },
-      email: {
-        type: 'string',
-        format: 'email',
-        description: 'Email address'
-      },
-      password: {
-        type: 'string',
-        minLength: 8,
-        description: 'Password (minimum 8 characters)'
-      },
-      name: {
-        type: 'string',
-        minLength: 2,
-        description: 'Full name'
-      },
-    },
-  },
-  response: {
-    201: {
-      description: 'Registration successful',
-      type: 'object',
-      properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
-        data: {
-          type: 'object',
-          properties: {
-            token: { type: 'string' },
-            user: {
-              type: 'object',
-              properties: {
-                id: { type: 'number' },
-                username: { type: 'string' },
-                email: { type: 'string' },
-                name: { type: 'string' },
-                role: {
-                  type: 'string',
-                  enum: ['USER', 'ADMIN', 'STAFF']
-                },
-                status: {
-                  type: 'string',
-                  enum: ['ACTIVE', 'INACTIVE', 'SUSPENDED']
-                },
-                created_at: { type: 'string' },
-                updated_at: { type: 'string' }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-};
-
-const loginSchema = {
-  description: 'Login and return JWT token',
-  tags: ['Users'],
-  body: {
-    type: 'object',
-    required: ['username', 'password'],
-    properties: {
-      username: {
-        type: 'string',
-        description: 'Username or email'
-      },
-      password: {
-        type: 'string',
-        description: 'Password'
-      },
-    },
-  },
-  response: {
-    200: {
-      description: 'Login successful',
-      type: 'object',
-      properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' },
-        data: {
-          type: 'object',
-          properties: {
-            token: { type: 'string' },
-            user: {
-              type: 'object',
-              properties: {
-                id: { type: 'number' },
-                username: { type: 'string' },
-                email: { type: 'string' },
-                name: { type: 'string' },
-                role: {
-                  type: 'string',
-                  enum: ['USER', 'ADMIN', 'STAFF']
-                },
-                status: {
-                  type: 'string',
-                  enum: ['ACTIVE', 'INACTIVE', 'SUSPENDED']
-                },
-                created_at: { type: 'string' },
-                updated_at: { type: 'string' }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-};
 
 const adminUsersListSchema = {
   description: 'Get all users (Admin)',
@@ -351,51 +229,47 @@ const updateUserStatusSchema = {
 };
 
 export default async function userRoutes(fastify: FastifyInstance) {
-  fastify.post("/users/register", { schema: registerSchema }, register);
-
-  fastify.post("/users/login", { schema: loginSchema }, login);
-
-  fastify.get('/users/profile', {
+  fastify.get('/profile', {
     schema: profileSchema,
     preHandler: authMiddleware
   }, getProfileHandler);
 
-  fastify.put('/users/profile', {
+  fastify.put('/profile', {
     schema: updateProfileSchema,
     preHandler: authMiddleware
   }, updateProfileHandler);
 
-  fastify.post('/users/change-password', {
+  fastify.post('/change-password', {
     schema: changePasswordSchema,
     preHandler: authMiddleware
   }, changePasswordHandler);
 
-  fastify.get('/admin/users', {
+  fastify.get('/admin', {
     schema: adminUsersListSchema,
     preHandler: [authMiddleware, requireRole('ADMIN')]
   }, getAllUsersHandler);
 
-  fastify.get('/admin/users/:id', {
+  fastify.get('/admin/:id', {
     schema: adminUserByIdSchema,
     preHandler: [authMiddleware, requireRole('ADMIN')]
   }, getUserByIdHandler);
 
-  fastify.put('/admin/users/:id', {
+  fastify.put('/admin/:id', {
     schema: adminUpdateUserSchema,
     preHandler: [authMiddleware, requireRole('ADMIN')]
   }, updateUserHandler);
 
-  fastify.delete('/admin/users/:id', {
+  fastify.delete('/admin/:id', {
     schema: deleteUserSchema,
     preHandler: [authMiddleware, requireRole('ADMIN')]
   }, deleteUserHandler);
 
-  fastify.get('/admin/users/stats', {
+  fastify.get('/admin/stats', {
     schema: userStatsSchema,
     preHandler: [authMiddleware, requireRole('ADMIN')]
   }, getUserStatsHandler);
 
-  fastify.put('/admin/users/:id/status', {
+  fastify.put('/admin/:id/status', {
     schema: updateUserStatusSchema,
     preHandler: [authMiddleware, requireRole('ADMIN')]
   }, updateUserStatusHandler);

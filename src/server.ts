@@ -111,8 +111,6 @@ server.register(fastifySwaggerUi, {
   transformStaticCSP: (header) => header,
 });
 
-const apiPrefix = "/api";
-
 server.get("/health", async (_request, _reply) => {
   const memUsage = process.memoryUsage();
   return {
@@ -142,31 +140,31 @@ server.setErrorHandler((error: Error, _request, reply) => {
 
 const start = async () => {
   try {
-    console.log('🚀 Starting SaaS Base Boilerplate...');
+    console.log('Starting SaaS Base Boilerplate...');
 
-    console.log('� Initializing permissions...');
+    console.log('Initializing permissions...');
     await initializePermissions();
 
-    console.log('�🔗 Registering routes...');
+    console.log('Registering routes...');
 
     const routes = [
-      { route: authRoutes, name: 'Auth' },
-      { route: userRoutes, name: 'User' },
-      { route: tenantRoutes, name: 'Tenant' },
-      { route: apiKeyRoutes, name: 'API Key' },
-      { route: balanceRoutes, name: 'Balance' }
+      { route: authRoutes, prefix: '/api/auth' },
+      { route: userRoutes, prefix: '/api/users' },
+      { route: tenantRoutes, prefix: '/api/tenant' },
+      { route: apiKeyRoutes, prefix: '/api/api-keys' },
+      { route: balanceRoutes, prefix: '/api/balance' }
     ];
 
-    for (const { route, name } of routes) {
+    for (const { route, prefix } of routes) {
       try {
-        await server.register(route, { prefix: apiPrefix });
-        console.log(`✅ ${name} routes registered`);
+        await server.register(route, { prefix });
+        console.log(`${prefix} registered`);
       } catch (err: any) {
-        console.error(`❌ ${name} routes failed:`, err.message);
+        console.error(`${prefix} failed:`, err.message);
       }
     }
 
-    console.log('🔗 All routes registration completed');
+    console.log('All routes registration completed');
 
     const port = parseInt(process.env.PORT || "8888") || 8888;
     const host = process.env.HOST || "localhost";
@@ -176,9 +174,9 @@ const start = async () => {
       host,
     });
 
-    console.log(`🚀 SaaS Base Boilerplate is running on http://${host}:${port}`);
-    console.log(`📊 Health check: http://${host}:${port}/health`);
-    console.log(`📚 Swagger Docs: http://${host}:${port}/docs`);
+    console.log(`SaaS Base Boilerplate is running on http://${host}:${port}`);
+    console.log(`Health check: http://${host}:${port}/health`);
+    console.log(`Swagger Docs: http://${host}:${port}/docs`);
   } catch (err) {
     server.log.error(err);
     process.exit(1);
@@ -190,13 +188,13 @@ start();
 ["SIGINT", "SIGTERM"].forEach((signal) => {
   process.on(signal, async () => {
     try {
-      console.log(`\n🛑 Received ${signal}, shutting down gracefully...`);
+      console.log(`\nReceived ${signal}, shutting down gracefully...`);
 
       await server.close();
-      console.log(`✅ Fastify server closed on ${signal}`);
+      console.log(`Fastify server closed on ${signal}`);
       process.exit(0);
     } catch (err) {
-      console.error("❌ Error during shutdown:", err);
+      console.error("Error during shutdown:", err);
       process.exit(1);
     }
   });
