@@ -59,12 +59,18 @@ export async function getApiKeysHandler(
     const query = request.query as any;
     const { page, limit } = extractPaginationParams(query);
 
-    const result = await getApiKeys(authRequest.user.userId, {
-      page,
-      limit,
-      is_active: query.is_active,
-      is_revoked: query.is_revoked,
-    });
+    const tenantId = authRequest.user.tenantId;
+
+    const result = await getApiKeys(
+      authRequest.user.userId,
+      tenantId,
+      {
+        page,
+        limit,
+        is_active: query.is_active,
+        is_revoked: query.is_revoked,
+      }
+    );
 
     const sanitizedItems = result.items.map(item => ({
       ...item,
@@ -110,7 +116,8 @@ export async function revokeApiKeyHandler(
       );
     }
 
-    await revokeApiKey(authRequest.user.userId, keyId);
+    const tenantId = authRequest.user.tenantId;
+    await revokeApiKey(authRequest.user.userId, tenantId, keyId);
 
     return reply.status(200).send(
       successResponse(null, "API key revoked successfully")
@@ -148,7 +155,8 @@ export async function deleteApiKeyHandler(
       );
     }
 
-    await deleteApiKey(authRequest.user.userId, keyId);
+    const tenantId = authRequest.user.tenantId;
+    await deleteApiKey(authRequest.user.userId, tenantId, keyId);
 
     return reply.status(200).send(
       successResponse(null, "API key deleted successfully")

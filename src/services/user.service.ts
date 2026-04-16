@@ -1,6 +1,7 @@
 import * as bcrypt from 'bcryptjs';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/utils/prisma';
+import { PASSWORD_CONFIG } from '@/utils/config';
 import { ICreateUserDto, IUpdateUserDto, IUpdateStatusDto, IUserLoginData, IPasswordChangeDto, UserQuery, UserPaginatedResponse, UserProfile } from '@/types/user';
 import { extractPaginationParams, buildPaginationMeta, calculateSkip } from '@/utils/pagination';
 import { signToken } from '@/middleware/auth';
@@ -34,7 +35,7 @@ export const createUser = async (data: ICreateUserDto): Promise<UserProfile> => 
       throw new Error('Username or email already exists');
     }
 
-    const hashedPassword = await bcrypt.hash(data.password, 10);
+    const hashedPassword = await bcrypt.hash(data.password, PASSWORD_CONFIG.saltRounds);
 
     const user = await prisma.user.create({
       data: {
@@ -90,6 +91,10 @@ export const getAllUsers = async (query: UserQuery = {}): Promise<UserPaginatedR
 
     if (query.status) {
       where.status = query.status as any;
+    }
+
+    if (query.tenantId) {
+      where.tenant_id = query.tenantId;
     }
 
     let orderBy: Prisma.UserOrderByWithRelationInput = {};
@@ -431,7 +436,7 @@ export const changePassword = async (userId: number, data: IPasswordChangeDto): 
       throw new Error('New passwords do not match');
     }
 
-    const hashedPassword = await bcrypt.hash(data.newPassword, 10);
+    const hashedPassword = await bcrypt.hash(data.newPassword, PASSWORD_CONFIG.saltRounds);
 
     await prisma.user.update({
       where: { id: userId },

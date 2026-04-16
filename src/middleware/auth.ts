@@ -3,6 +3,7 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import * as jwt from "jsonwebtoken";
 import { errorResponse } from "../utils/response";
 import { prisma } from "../utils/prisma";
+import { JWT_CONFIG, API_CONFIG } from "../utils/config";
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -10,21 +11,20 @@ declare module 'fastify' {
       userId: number;
       role: UserRole;
       username: string;
+      tenantId?: number;
     };
   }
 }
-
-const JWT_SECRET = process.env.JWT_SECRET || "tradingsystem";
-const HEADER_KEY = process.env.X_HEADER_KEY || "tradingsystem-header-key";
 
 export interface AuthPayload {
   userId: number;
   role: UserRole;
   username: string;
+  tenantId?: number;
 }
 
 export function signToken(payload: AuthPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
+  return jwt.sign(payload, JWT_CONFIG.secret, { expiresIn: JWT_CONFIG.accessTokenExpiry });
 }
 
 export async function authMiddleware(
@@ -39,34 +39,37 @@ export async function authMiddleware(
         .send(errorResponse("Missing Authorization header", "No authorization token provided", { errorCode: ErrorCode.UNAUTHORIZED }));
     }
     const token = authHeader.replace("Bearer ", "");
-    const decoded = jwt.verify(token, JWT_SECRET) as AuthPayload;
+    const decoded = jwt.verify(token, JWT_CONFIG.secret) as AuthPayload;
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { id: true, status: true, role: true, username: true }
+      select: { id: true, status: true, role: true, username: true, tenant_id: true }
     });
 
     if (!user) {
       return reply
         .status(401)
-        .send(errorResponse("User not found", "Tài khoản không tồn tại", { errorCode: ErrorCode.UNAUTHORIZED }));
+        .send(errorResponse("User not found", "Account does not exist", { errorCode: ErrorCode.UNAUTHORIZED }));
     }
 
     if (user.role !== 'ADMIN') {
       if (user.status === 'SUSPENDED') {
         return reply
           .status(403)
-          .send(errorResponse("Tài khoản đã bị khóa", "Tài khoản của bạn đã bị tạm khóa. Vui lòng liên hệ hỗ trợ.", { errorCode: ErrorCode.FORBIDDEN }));
+          .send(errorResponse("Account suspended", "Your account has been temporarily suspended. Please contact support.", { errorCode: ErrorCode.FORBIDDEN }));
       }
 
       if (user.status === 'INACTIVE') {
         return reply
           .status(403)
-          .send(errorResponse("Tài khoản không hoạt động", "Tài khoản của bạn đã bị vô hiệu hóa.", { errorCode: ErrorCode.FORBIDDEN }));
+          .send(errorResponse("Account inactive", "Your account has been deactivated.", { errorCode: ErrorCode.FORBIDDEN }));
       }
     }
 
-    request.user = decoded;
+    request.user = {
+      ...decoded,
+      tenantId: user.tenant_id || undefined
+    };
   } catch (error) {
     return reply
       .status(401)
@@ -78,11 +81,19 @@ export async function authMiddleware(
 
 export function requireRole(role: UserRole) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
-    if (!request.user || request.user.role !== role) {
+    if (!request.user) {
       return reply
-        .status(403)
-        .send(errorResponse("Forbidden: insufficient role", "User lacks required permissions", { errorCode: ErrorCode.UNAUTHORIZED }));
+        .status(401)
+        .send(errorResponse("Unauthorized", "Authentication required", { errorCode: ErrorCode.UNAUTHORIZED }));
     }
+
+    if (request.user.role === 'ADMIN' || request.user.role === role) {
+      return;
+    }
+
+    return reply
+      .status(403)
+      .send(errorResponse("Forbidden: insufficient role", "User lacks required permissions", { errorCode: ErrorCode.UNAUTHORIZED }));
   };
 }
 
@@ -98,7 +109,7 @@ export async function headerKeyMiddleware(
       .send(errorResponse("Missing X-API-KEY header", "API key is required for this endpoint", { errorCode: ErrorCode.UNAUTHORIZED }));
   }
 
-  if (headerKey !== HEADER_KEY) {
+  if (headerKey !== API_CONFIG.headerKey) {
     return reply.status(403).send(
       errorResponse("Invalid API key", "The provided API key is incorrect", { errorCode: ErrorCode.UNAUTHORIZED })
     );

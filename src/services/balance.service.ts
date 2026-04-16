@@ -210,6 +210,14 @@ export const getAllTransactions = async (query: ITransactionQuery = {}): Promise
       where.status = query.status;
     }
 
+    if (query.tenantId) {
+      const tenantUserIds = await prisma.user.findMany({
+        where: { tenant_id: query.tenantId },
+        select: { id: true },
+      });
+      where.user_id = { in: tenantUserIds.map(u => u.id) };
+    }
+
     let orderBy: any = { created_at: 'desc' };
     if (query.sortBy) {
       orderBy = { [query.sortBy]: query.sortOrder || 'desc' };

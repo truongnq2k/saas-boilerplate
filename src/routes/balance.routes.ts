@@ -6,6 +6,7 @@ import {
   subtractBalanceHandler,
   getAllTransactionsHandler,
 } from "../controllers/balance.controller";
+import { authMiddleware, requireRole } from "../middleware/auth";
 
 export default async function balanceRoutes(fastify: FastifyInstance) {
   fastify.get(
@@ -16,6 +17,7 @@ export default async function balanceRoutes(fastify: FastifyInstance) {
         tags: ["Balance"],
         security: [{ bearerAuth: [] }],
       },
+      preHandler: authMiddleware,
     },
     getUserBalanceHandler
   );
@@ -39,6 +41,7 @@ export default async function balanceRoutes(fastify: FastifyInstance) {
           },
         },
       },
+      preHandler: authMiddleware,
     },
     getUserTransactionsHandler
   );
@@ -60,6 +63,7 @@ export default async function balanceRoutes(fastify: FastifyInstance) {
           },
         },
       },
+      preHandler: [authMiddleware, requireRole('ADMIN')],
     },
     addBalanceHandler
   );
@@ -81,6 +85,7 @@ export default async function balanceRoutes(fastify: FastifyInstance) {
           },
         },
       },
+      preHandler: [authMiddleware, requireRole('ADMIN')],
     },
     subtractBalanceHandler
   );
@@ -105,6 +110,7 @@ export default async function balanceRoutes(fastify: FastifyInstance) {
           },
         },
       },
+      preHandler: [authMiddleware, requireRole('ADMIN')],
     },
     getAllTransactionsHandler
   );

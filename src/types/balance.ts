@@ -27,6 +27,7 @@ export interface ITransactionResponse {
 
 export interface ITransactionQuery {
   userId?: number;
+  tenantId?: number;
   type?: 'CREDIT' | 'DEBIT';
   status?: 'PENDING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
   page?: number;

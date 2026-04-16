@@ -17,19 +17,6 @@ export async function createTenantHandler(
   reply: FastifyReply
 ) {
   try {
-    const authRequest = request as AuthenticatedRequest;
-    if (!authRequest.user) {
-      return reply.status(401).send(
-        errorResponse("Unauthorized", "Authentication required")
-      );
-    }
-
-    if (authRequest.user.role !== "ADMIN") {
-      return reply.status(403).send(
-        errorResponse("Forbidden", "Only admins can create tenants")
-      );
-    }
-
     const result = await createTenant(request.body as ITenantDto);
     return reply.status(201).send(successResponse(result, "Tenant created successfully"));
   } catch (error) {
@@ -45,13 +32,6 @@ export async function getAllTenantsHandler(
   reply: FastifyReply
 ) {
   try {
-    const authRequest = request as AuthenticatedRequest;
-    if (!authRequest.user) {
-      return reply.status(401).send(
-        errorResponse("Unauthorized", "Authentication required")
-      );
-    }
-
     const query = request.query as any;
     const { page, limit } = extractPaginationParams(query);
 
@@ -78,13 +58,6 @@ export async function getTenantByIdHandler(
   reply: FastifyReply
 ) {
   try {
-    const authRequest = request as AuthenticatedRequest;
-    if (!authRequest.user) {
-      return reply.status(401).send(
-        errorResponse("Unauthorized", "Authentication required")
-      );
-    }
-
     const { id } = request.params as { id: string };
     const tenantId = parseInt(id);
 
@@ -112,19 +85,6 @@ export async function updateTenantHandler(
   reply: FastifyReply
 ) {
   try {
-    const authRequest = request as AuthenticatedRequest;
-    if (!authRequest.user) {
-      return reply.status(401).send(
-        errorResponse("Unauthorized", "Authentication required")
-      );
-    }
-
-    if (authRequest.user.role !== "ADMIN") {
-      return reply.status(403).send(
-        errorResponse("Forbidden", "Only admins can update tenants")
-      );
-    }
-
     const { id } = request.params as { id: string };
     const tenantId = parseInt(id);
 
@@ -147,19 +107,6 @@ export async function deleteTenantHandler(
   reply: FastifyReply
 ) {
   try {
-    const authRequest = request as AuthenticatedRequest;
-    if (!authRequest.user) {
-      return reply.status(401).send(
-        errorResponse("Unauthorized", "Authentication required")
-      );
-    }
-
-    if (authRequest.user.role !== "ADMIN") {
-      return reply.status(403).send(
-        errorResponse("Forbidden", "Only admins can delete tenants")
-      );
-    }
-
     const { id } = request.params as { id: string };
     const tenantId = parseInt(id);
 
@@ -182,13 +129,6 @@ export async function getTenantStatsHandler(
   reply: FastifyReply
 ) {
   try {
-    const authRequest = request as AuthenticatedRequest;
-    if (!authRequest.user) {
-      return reply.status(401).send(
-        errorResponse("Unauthorized", "Authentication required")
-      );
-    }
-
     const { id } = request.params as { id: string };
     const tenantId = parseInt(id);
 

@@ -1,30 +1,25 @@
 import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcryptjs';
 import { prisma } from '@/utils/prisma';
+import { JWT_CONFIG, PASSWORD_CONFIG } from '@/utils/config';
 import { IAuthTokens, IRefreshTokenDto, IRegisterDto, ILoginDto, IForgotPasswordDto, IResetPasswordDto, IAuthResponse } from '@/types/auth';
 import { UserRole, UserStatus } from '@/types/common';
 import { emailService } from '@/services/email.service';
 import { UserProfile } from '@/types/user';
-
-const JWT_SECRET = process.env.JWT_SECRET || "tradingsystem";
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "tradingsystem-refresh-secret";
-const ACCESS_TOKEN_EXPIRY = '15m';
-const REFRESH_TOKEN_EXPIRY_DAYS = 7;
-const PASSWORD_RESET_TOKEN_EXPIRY_HOURS = 1;
 
 export const generateAccessToken = (payload: {
   userId: number;
   role: UserRole;
   username: string;
 }): string => {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: ACCESS_TOKEN_EXPIRY });
+  return jwt.sign(payload, JWT_CONFIG.secret, { expiresIn: JWT_CONFIG.accessTokenExpiry });
 };
 
 export const generateRefreshToken = async (userId: number): Promise<string> => {
-  const token = jwt.sign({ userId }, JWT_REFRESH_SECRET, { expiresIn: `${REFRESH_TOKEN_EXPIRY_DAYS}d` });
+  const token = jwt.sign({ userId }, JWT_CONFIG.refreshSecret, { expiresIn: `${JWT_CONFIG.refreshTokenExpiryDays}d` });
 
   const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRY_DAYS);
+  expiresAt.setDate(expiresAt.getDate() + JWT_CONFIG.refreshTokenExpiryDays);
 
   await prisma.refreshToken.create({
     data: {
@@ -52,7 +47,7 @@ export const register = async (data: IRegisterDto): Promise<IAuthResponse> => {
       throw new Error('Username or email already exists');
     }
 
-    const hashedPassword = await bcrypt.hash(data.password, 10);
+    const hashedPassword = await bcrypt.hash(data.password, PASSWORD_CONFIG.saltRounds);
 
     const user = await prisma.user.create({
       data: {
@@ -181,12 +176,12 @@ export const forgotPassword = async (data: IForgotPasswordDto): Promise<void> =>
 
     const resetToken = jwt.sign(
       { userId: user.id, type: 'password-reset' },
-      JWT_SECRET,
-      { expiresIn: `${PASSWORD_RESET_TOKEN_EXPIRY_HOURS}h` }
+      JWT_CONFIG.secret,
+      { expiresIn: `${JWT_CONFIG.passwordResetTokenExpiryHours}h` }
     );
 
     const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + PASSWORD_RESET_TOKEN_EXPIRY_HOURS);
+    expiresAt.setHours(expiresAt.getHours() + JWT_CONFIG.passwordResetTokenExpiryHours);
 
     await prisma.passwordResetToken.create({
       data: {
@@ -211,7 +206,7 @@ export const resetPassword = async (data: IResetPasswordDto): Promise<void> => {
       throw new Error('Passwords do not match');
     }
 
-    const decoded = jwt.verify(data.token, JWT_SECRET) as { userId: number; type: string };
+    const decoded = jwt.verify(data.token, JWT_CONFIG.secret) as { userId: number; type: string };
 
     if (decoded.type !== 'password-reset') {
       throw new Error('Invalid token');
@@ -236,7 +231,7 @@ export const resetPassword = async (data: IResetPasswordDto): Promise<void> => {
       throw new Error('Token has expired');
     }
 
-    const hashedPassword = await bcrypt.hash(data.newPassword, 10);
+    const hashedPassword = await bcrypt.hash(data.newPassword, PASSWORD_CONFIG.saltRounds);
 
     await prisma.$transaction([
       prisma.user.update({
@@ -260,7 +255,7 @@ export const resetPassword = async (data: IResetPasswordDto): Promise<void> => {
 
 export const refreshAccessToken = async (data: IRefreshTokenDto): Promise<IAuthTokens> => {
   try {
-    const decoded = jwt.verify(data.refreshToken, JWT_REFRESH_SECRET) as { userId: number };
+    const decoded = jwt.verify(data.refreshToken, JWT_CONFIG.refreshSecret) as { userId: number };
 
     const storedToken = await prisma.refreshToken.findUnique({
       where: { token: data.refreshToken },

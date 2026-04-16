@@ -1,5 +1,7 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { getUserBalance, addBalance, subtractBalance, getUserTransactions, getAllTransactions } from "@/services/balance.service";
+import { prisma } from "@/utils/prisma";
+import { AuthenticatedRequest } from "@/types/request";
 import { IAddBalanceDto, ISubtractBalanceDto, ITransactionQuery } from "@/types/balance";
 import { errorResponse, successResponse, forbiddenResponse } from "@/utils/response";
 
@@ -8,16 +10,9 @@ export async function getUserBalanceHandler(
   reply: FastifyReply
 ) {
   try {
-    const authRequest = request as any;
-    const userId = authRequest.user?.userId;
+    const authRequest = request as AuthenticatedRequest;
 
-    if (!userId) {
-      return reply.status(401).send(
-        forbiddenResponse("Authentication required")
-      );
-    }
-
-    const balance = await getUserBalance(userId);
+    const balance = await getUserBalance(authRequest.user.userId);
 
     return reply.status(200).send(
       successResponse(balance, "Balance retrieved successfully")
@@ -39,17 +34,10 @@ export async function getUserTransactionsHandler(
   reply: FastifyReply
 ) {
   try {
-    const authRequest = request as any;
-    const userId = authRequest.user?.userId;
-
-    if (!userId) {
-      return reply.status(401).send(
-        forbiddenResponse("Authentication required")
-      );
-    }
+    const authRequest = request as AuthenticatedRequest;
 
     const query = request.query as ITransactionQuery;
-    const result = await getUserTransactions(userId, query);
+    const result = await getUserTransactions(authRequest.user.userId, query);
 
     return reply.status(200).send(
       successResponse(result, "Transactions retrieved successfully")
@@ -71,14 +59,7 @@ export async function addBalanceHandler(
   reply: FastifyReply
 ) {
   try {
-    const authRequest = request as any;
-    const role = authRequest.user?.role;
-
-    if (role !== 'ADMIN') {
-      return reply.status(403).send(
-        forbiddenResponse("Admin access required")
-      );
-    }
+    const authRequest = request as AuthenticatedRequest;
 
     const data = request.body as IAddBalanceDto;
 
@@ -92,6 +73,19 @@ export async function addBalanceHandler(
       return reply.status(400).send(
         errorResponse("Bad Request", "Amount must be greater than 0")
       );
+    }
+
+    if (authRequest.user.tenantId) {
+      const targetUser = await prisma.user.findUnique({
+        where: { id: data.userId },
+        select: { tenant_id: true },
+      });
+
+      if (!targetUser || targetUser.tenant_id !== authRequest.user.tenantId) {
+        return reply.status(403).send(
+          forbiddenResponse("Cannot modify balance for user in different tenant")
+        );
+      }
     }
 
     const transaction = await addBalance(data);
@@ -116,14 +110,7 @@ export async function subtractBalanceHandler(
   reply: FastifyReply
 ) {
   try {
-    const authRequest = request as any;
-    const role = authRequest.user?.role;
-
-    if (role !== 'ADMIN') {
-      return reply.status(403).send(
-        forbiddenResponse("Admin access required")
-      );
-    }
+    const authRequest = request as AuthenticatedRequest;
 
     const data = request.body as ISubtractBalanceDto;
 
@@ -137,6 +124,19 @@ export async function subtractBalanceHandler(
       return reply.status(400).send(
         errorResponse("Bad Request", "Amount must be greater than 0")
       );
+    }
+
+    if (authRequest.user.tenantId) {
+      const targetUser = await prisma.user.findUnique({
+        where: { id: data.userId },
+        select: { tenant_id: true },
+      });
+
+      if (!targetUser || targetUser.tenant_id !== authRequest.user.tenantId) {
+        return reply.status(403).send(
+          forbiddenResponse("Cannot modify balance for user in different tenant")
+        );
+      }
     }
 
     const transaction = await subtractBalance(data);
@@ -161,16 +161,14 @@ export async function getAllTransactionsHandler(
   reply: FastifyReply
 ) {
   try {
-    const authRequest = request as any;
-    const role = authRequest.user?.role;
-
-    if (role !== 'ADMIN') {
-      return reply.status(403).send(
-        forbiddenResponse("Admin access required")
-      );
-    }
+    const authRequest = request as AuthenticatedRequest;
 
     const query = request.query as ITransactionQuery;
+
+    if (authRequest.user.tenantId) {
+      query.tenantId = authRequest.user.tenantId;
+    }
+
     const result = await getAllTransactions(query);
 
     return reply.status(200).send(

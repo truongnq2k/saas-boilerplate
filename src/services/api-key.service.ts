@@ -74,6 +74,7 @@ export const createApiKey = async (
 
 export const getApiKeys = async (
   userId: number,
+  tenantId: number | undefined,
   query: IApiKeyQuery = {}
 ): Promise<ApiKeyPaginatedResponse> => {
   try {
@@ -83,6 +84,10 @@ export const getApiKeys = async (
     const where: any = {
       user_id: userId,
     };
+
+    if (tenantId !== undefined) {
+      where.tenant_id = tenantId;
+    }
 
     if (query.is_active !== undefined) where.is_active = query.is_active;
     if (query.is_revoked !== undefined) where.is_revoked = query.is_revoked;
@@ -169,13 +174,23 @@ export const verifyApiKey = async (key: string): Promise<{
   }
 };
 
-export const revokeApiKey = async (userId: number, keyId: number): Promise<void> => {
+export const revokeApiKey = async (
+  userId: number,
+  tenantId: number | undefined,
+  keyId: number
+): Promise<void> => {
   try {
+    const whereClause: any = {
+      id: keyId,
+      user_id: userId,
+    };
+
+    if (tenantId !== undefined) {
+      whereClause.tenant_id = tenantId;
+    }
+
     const apiKey = await prisma.apiKey.findFirst({
-      where: {
-        id: keyId,
-        user_id: userId,
-      },
+      where: whereClause,
     });
 
     if (!apiKey) {
@@ -192,13 +207,23 @@ export const revokeApiKey = async (userId: number, keyId: number): Promise<void>
   }
 };
 
-export const deleteApiKey = async (userId: number, keyId: number): Promise<void> => {
+export const deleteApiKey = async (
+  userId: number,
+  tenantId: number | undefined,
+  keyId: number
+): Promise<void> => {
   try {
+    const whereClause: any = {
+      id: keyId,
+      user_id: userId,
+    };
+
+    if (tenantId !== undefined) {
+      whereClause.tenant_id = tenantId;
+    }
+
     const apiKey = await prisma.apiKey.findFirst({
-      where: {
-        id: keyId,
-        user_id: userId,
-      },
+      where: whereClause,
     });
 
     if (!apiKey) {

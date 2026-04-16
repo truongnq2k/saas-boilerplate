@@ -5,6 +5,7 @@ export interface AuthenticatedUser {
   userId: number;
   role: UserRole;
   username: string;
+  tenantId?: number;
 }
 
 export interface AuthenticatedRequest extends FastifyRequest {

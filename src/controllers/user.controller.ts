@@ -30,6 +30,7 @@ export async function register(request: FastifyRequest, reply: FastifyReply) {
         unauthorizedResponse(error.message)
       );
     }
+    return reply.status(500).send(errorResponse("Internal Server Error", "Failed to register user"));
   }
 }
 
@@ -47,6 +48,7 @@ export async function login(request: FastifyRequest, reply: FastifyReply) {
         unauthorizedResponse(error.message)
       );
     }
+    return reply.status(500).send(errorResponse("Internal Server Error", "Failed to login"));
   }
 }
 
@@ -61,6 +63,13 @@ export async function getAllUsersHandler(request: FastifyRequest, reply: Fastify
   const query = request.query as any;
   const { page, limit } = extractPaginationParams(query);
 
+  let tenantId: number | undefined;
+  if (authRequest.user.role !== 'ADMIN' && authRequest.user.tenantId) {
+    tenantId = authRequest.user.tenantId;
+  } else if (query.tenantId) {
+    tenantId = parseInt(query.tenantId);
+  }
+
   try {
     const result = await getAllUsers({
       page,
@@ -69,7 +78,8 @@ export async function getAllUsersHandler(request: FastifyRequest, reply: Fastify
       sortBy: query.sortBy,
       sortOrder: query.sortOrder,
       role: query.role,
-      status: query.status
+      status: query.status,
+      tenantId
     });
 
     return reply.status(200).send(
@@ -81,6 +91,7 @@ export async function getAllUsersHandler(request: FastifyRequest, reply: Fastify
         errorResponse('Failed to get users', error.message)
       );
     }
+    return reply.status(500).send(errorResponse('Internal Server Error', 'Failed to get users'));
   }
 }
 

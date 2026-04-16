@@ -7,7 +7,7 @@ import {
   getTenantStatsHandler,
   updateTenantHandler,
 } from "../controllers/tenant.controller";
-import { authMiddleware } from "../middleware/auth";
+import { authMiddleware, requireRole } from "../middleware/auth";
 
 export default async function tenantRoutes(fastify: FastifyInstance) {
   fastify.addHook("preHandler", authMiddleware);
@@ -62,6 +62,7 @@ export default async function tenantRoutes(fastify: FastifyInstance) {
           },
         },
       },
+      preHandler: [requireRole('ADMIN')],
     },
     createTenantHandler
   );
@@ -84,6 +85,7 @@ export default async function tenantRoutes(fastify: FastifyInstance) {
           },
         },
       },
+      preHandler: [requireRole('ADMIN')],
     },
     getAllTenantsHandler
   );
@@ -102,6 +104,7 @@ export default async function tenantRoutes(fastify: FastifyInstance) {
           },
         },
       },
+      preHandler: [requireRole('ADMIN')],
     },
     getTenantByIdHandler
   );
@@ -128,6 +131,7 @@ export default async function tenantRoutes(fastify: FastifyInstance) {
           },
         },
       },
+      preHandler: [requireRole('ADMIN')],
     },
     updateTenantHandler
   );
@@ -146,6 +150,7 @@ export default async function tenantRoutes(fastify: FastifyInstance) {
           },
         },
       },
+      preHandler: [requireRole('ADMIN')],
     },
     deleteTenantHandler
   );
@@ -164,6 +169,7 @@ export default async function tenantRoutes(fastify: FastifyInstance) {
           },
         },
       },
+      preHandler: [requireRole('ADMIN')],
     },
     getTenantStatsHandler
   );
