@@ -4,7 +4,7 @@ import { prisma } from '@/utils/prisma';
 import { JWT_CONFIG, PASSWORD_CONFIG } from '@/utils/config';
 import { IAuthTokens, IRefreshTokenDto, IRegisterDto, ILoginDto, IForgotPasswordDto, IResetPasswordDto, IAuthResponse } from '@/types/auth';
 import { UserRole, UserStatus } from '@/types/common';
-import { emailService } from '@/services/email.service';
+import { sendWelcomeEmail, sendPasswordResetEmail } from '@/services/email.service';
 import { UserProfile } from '@/types/user';
 
 export const generateAccessToken = (payload: {
@@ -69,7 +69,7 @@ export const register = async (data: IRegisterDto): Promise<IAuthResponse> => {
     const refreshToken = await generateRefreshToken(user.id);
 
     if (user.email) {
-      await emailService.sendWelcomeEmail(user.email, user.name);
+      await sendWelcomeEmail(user.email, user.name);
     }
 
     const expiresIn = 15 * 60;
@@ -192,7 +192,7 @@ export const forgotPassword = async (data: IForgotPasswordDto): Promise<void> =>
     });
 
     if (user.email) {
-      await emailService.sendPasswordResetEmail(user.email, user.name, resetToken);
+      await sendPasswordResetEmail(user.email, user.name, resetToken);
     }
   } catch (error) {
     console.error('Error in forgot password:', error);
